@@ -39,9 +39,9 @@ class SummarizeCasesEvery24Hours extends Command
      */
     public function handle()
     {
-        //$this->fillDates();
-        //$this->fixFirstValue();
-        //$this->fixZeroDates();
+        $this->fillDates();
+        $this->fixFirstValue();
+        $this->fixZeroDates();
         $this->fixValues();
 
     }
