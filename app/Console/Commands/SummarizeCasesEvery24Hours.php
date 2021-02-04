@@ -117,7 +117,7 @@ class SummarizeCasesEvery24Hours extends Command
             foreach ($casos as $caso) {
                 if ($caso["dataCaso"] == '2020-02-01') {
                     if ($caso["confirmadosCaso"] == "a" && $caso["recuperadosCaso"] == "a" && $caso["obitosCaso"] == "a")
-                        DB::select("UPDATE CASO set confirmadosCaso = 0, recuperadosCaso = 0, obitosCaso = 0 WHERE idCaso = " . $caso['idCaso'] . "");
+                        DB::select("UPDATE caso set confirmadosCaso = 0, recuperadosCaso = 0, obitosCaso = 0 WHERE idCaso = " . $caso['idCaso'] . "");
                 }
             }
         }
