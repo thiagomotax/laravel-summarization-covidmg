@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use App\Models\Caso;
 use \DB;
 use \Schema;
+use DateTime;
 
 class SummarizeCasesEvery24Hours extends Command
 {
@@ -49,17 +50,20 @@ class SummarizeCasesEvery24Hours extends Command
 
     }
 
-    public function fillDatesCalendar(){
+    public function fillDatesCalendar()
+    {
         $this->info('running fillDatesCalendar');
         Schema::dropIfExists('calendar');
         DB::statement("CREATE TABLE calendar(datefield DATE)");
 
-        $firstCaseDate = '2020-02-01';
+        $firstCaseDate = new DateTime('2020-02-01');
+        $firstCaseDate = $firstCaseDate->format('Y-m-d');
+
         $actualDate = date('Y-m-d');
         $this->info('actual date: ' . $actualDate);
-
-        DB::statement('CALL FillCalendar('.$firstCaseDate.', '.$actualDate.')');
+        DB::select("call FillCalendar('$firstCaseDate', '$actualDate')");
     }
+
 
     public function fillCasesDates()
         {
