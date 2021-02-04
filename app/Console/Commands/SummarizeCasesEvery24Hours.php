@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\Caso;
 use \DB;
+use \Schema;
 
 class SummarizeCasesEvery24Hours extends Command
 {
@@ -39,14 +40,28 @@ class SummarizeCasesEvery24Hours extends Command
      */
     public function handle()
     {
-        $this->fillDates();
-        $this->fixFirstValue();
-        $this->fixZeroDates();
-        $this->fixValues();
+        $this->info('running');
+        $this->fillDatesCalendar();
+//        $this->fillCasesDates();
+//        $this->fixFirstValue();
+//        $this->fixZeroDates();
+//        $this->fixValues();
 
     }
 
-    public function fillDates()
+    public function fillDatesCalendar(){
+        $this->info('running fillDatesCalendar');
+        Schema::dropIfExists('calendar');
+        DB::statement("CREATE TABLE calendar(datefield DATE)");
+
+        $firstCaseDate = '2020-02-01';
+        $actualDate = date('Y-m-d');
+        $this->info('actual date: ' . $actualDate);
+
+        DB::statement('CALL FillCalendar('.$firstCaseDate.', '.$actualDate.')');
+    }
+
+    public function fillCasesDates()
         {
             $model = new Caso();
             $queryIds =  DB::select("SELECT idMunicipio AS id FROM municipio");
@@ -81,7 +96,7 @@ class SummarizeCasesEvery24Hours extends Command
                 }
             }
         }
-    
+
         public function fixFirstValue()
         {
             $model = new Caso();
@@ -103,12 +118,12 @@ class SummarizeCasesEvery24Hours extends Command
                 }
             }
         }
-        
+
         public function fixZeroDates(){
             $model = new Caso();
              DB::select("DELETE FROM caso WHERE dataCaso = '0000-00-00' ");
         }
-    
+
         public function fixValues()
         {
             $model = new Caso();
@@ -117,7 +132,7 @@ class SummarizeCasesEvery24Hours extends Command
 
             foreach ($idsMunicipios as $id) {
                 $queryCasos	 =  DB::select("SELECT  * FROM caso WHERE idMunicipio = '".$id['id']."' AND deleted_at = '0000-00-00' ORDER BY dataCaso ASC");
-    
+
                 $casos = json_decode(json_encode($queryCasos), true);
 
                 $previousConfirmados = null;
@@ -130,22 +145,22 @@ class SummarizeCasesEvery24Hours extends Command
                     if ($previousConfirmados > $caso['confirmadosCaso']) {
                         $queryCasos	 =  DB::select("DELETE FROM caso WHERE idCaso = '".$caso['idCaso'] ."' ") ;
                     }
-    
+
                     if ($caso["recuperadosCaso"] == "a") {
                         $queryCasos	 =  DB::select("UPDATE caso SET recuperadosCaso = '".$previousRecuperados."' WHERE idCaso =  '".$caso['idCaso']."' ");
                     }
                     if ($previousRecuperados > $caso['recuperadosCaso']) {
                         $queryCasos	 =  DB::select("DELETE FROM caso WHERE idCaso = '".$caso['idCaso'] ."' ") ;
                     }
-    
+
                     if ($caso["obitosCaso"] == "a") {
                         $queryCasos	 =  DB::select("UPDATE caso SET obitosCaso = '".$previousObitos."' WHERE idCaso =  '".$caso['idCaso']."' ");
                     }
                     if ($previousObitos > $caso['obitosCaso']) {
                         $queryCasos	 =  DB::select("DELETE FROM caso WHERE idCaso = '".$caso['idCaso'] ."' ") ;
                     }
-    
-    
+
+
                     $previousConfirmados = $caso["confirmadosCaso"] != "a" ? $caso["confirmadosCaso"] : $previousConfirmados;
                     $previousRecuperados = $caso["recuperadosCaso"] != "a" ? $caso["recuperadosCaso"] : $previousRecuperados;
                     $previousObitos = $caso["obitosCaso"] != "a" ? $caso["obitosCaso"] : $previousObitos;
