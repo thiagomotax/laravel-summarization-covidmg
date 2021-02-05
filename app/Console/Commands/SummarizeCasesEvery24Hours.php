@@ -53,6 +53,8 @@ class SummarizeCasesEvery24Hours extends Command
     public function fillDatesCalendar()
     {
         $this->info('running fillDatesCalendar');
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+
         Schema::dropIfExists('calendar');
         DB::statement("CREATE TABLE calendar(datefield DATE)");
 
