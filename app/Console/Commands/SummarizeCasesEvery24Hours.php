@@ -42,17 +42,23 @@ class SummarizeCasesEvery24Hours extends Command
     public function handle()
     {
         $this->info('running');
+        $this->test();
+
         $this->fillDatesCalendar();
         $this->fillCasesDates();
         $this->fixFirstValue();
         $this->fixZeroDates();
         $this->fixValues();
+    }
 
+    public function test(){
+        $this->info(date('Y-m-d', time() - 86400));
     }
 
     public function fillDatesCalendar()
     {
         $this->info('running fillDatesCalendar');
+
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
         Schema::dropIfExists('calendar');
@@ -61,15 +67,15 @@ class SummarizeCasesEvery24Hours extends Command
         $firstCaseDate = new DateTime('2020-02-01');
         $firstCaseDate = $firstCaseDate->format('Y-m-d');
 
-        $actualDate = date('Y-m-d');
-        $this->info('actual date: ' . $actualDate);
-        DB::select("call FillCalendar('$firstCaseDate', '$actualDate')");
+        $lastDayDate = date('Y-m-d', time() - 86400);
+        DB::select("call FillCalendar('$firstCaseDate', '$lastDayDate')");
     }
 
 
     public function fillCasesDates()
     {
         $this->info('running fillCasesDates');
+
         $model = new Caso();
         $queryIds = DB::select("SELECT idMunicipio AS id FROM municipio");
         $idsMunicipios = json_decode(json_encode($queryIds), true);
