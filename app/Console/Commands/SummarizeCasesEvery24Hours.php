@@ -98,10 +98,16 @@ class SummarizeCasesEvery24Hours extends Command
             foreach ($casos as $caso) {
                 if ($caso["idMunicipio"] == NULL) {
                     $data = $caso["datefield"][0] . $caso["datefield"][1] . $caso["datefield"][2] . $caso["datefield"][3] . $caso["datefield"][4] . $caso["datefield"][5] . $caso["datefield"][6] . $caso["datefield"][7] . $caso["datefield"][8] . $caso["datefield"][9];
+
+                    //pega a ultima fonte cadastrada
+                    $fonteQuery = DB::select("SELECT fonteCaso FROM caso WHERE idMunicipio = '" . $id['id'] . "' AND fonteCaso <> '' AND auto = 0 ORDER BY idMunicipio DESC LIMIT 1");
+                    $fonteAux = json_decode(json_encode($fonteQuery), true);
+                    $fonte =  isset($fonteAux) && isset($fonteAux[0]) && isset($fonteAux[0]['fonteCaso']) ? $fonteAux[0]['fonteCaso'] : '';
+
                     DB::select("INSERT INTO caso(
                             idMunicipio, idUsuario, dataCaso, confirmadosCaso,
-                             obitosCaso, recuperadosCaso, auto) VALUES(
-                            '" . $id['id'] . "', $userId, '$data', 'a', 'a', 'a', 1)");
+                             obitosCaso, recuperadosCaso, suspeitosCaso, descartadosCaso, fonteCaso, auto) VALUES(
+                            '" . $id['id'] . "', $userId, '$data', 'a', 'a', 'a', 'a', 'a', '$fonte', 1)");
                 }
             }
         }
@@ -124,8 +130,8 @@ class SummarizeCasesEvery24Hours extends Command
             $casos = json_decode(json_encode($queryCasos), true);
             foreach ($casos as $caso) {
                 if ($caso["dataCaso"] == '2020-02-01') {
-                    if ($caso["confirmadosCaso"] == "a" && $caso["recuperadosCaso"] == "a" && $caso["obitosCaso"] == "a")
-                        DB::select("UPDATE caso set confirmadosCaso = 0, recuperadosCaso = 0, obitosCaso = 0 WHERE idCaso = " . $caso['idCaso'] . "");
+                    if ($caso["confirmadosCaso"] == "a" && $caso["recuperadosCaso"] == "a" && $caso["obitosCaso"] == "a" && $caso["suspeitosCaso"] == "a" && $caso["descartadosCaso"] == "a")
+                        DB::select("UPDATE caso set confirmadosCaso = 0, recuperadosCaso = 0, obitosCaso = 0, suspeitosCaso = 0, descartadosCaso = 0 WHERE idCaso = " . $caso['idCaso'] . "");
                 }
             }
         }
@@ -155,7 +161,11 @@ class SummarizeCasesEvery24Hours extends Command
             $previousConfirmados = null;
             $previousRecuperados = null;
             $previousObitos = null;
+            $previousDescartados = null;
+            $previousSuspeitos = null;
+
             foreach ($casos as $key => $caso) {
+                //confirmados
                 if ($caso["confirmadosCaso"] == "a") {
                     $queryCasos = DB::select("UPDATE caso SET confirmadosCaso = '" . $previousConfirmados . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
                 }
@@ -163,6 +173,7 @@ class SummarizeCasesEvery24Hours extends Command
                     $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
                 }
 
+                //recuperados
                 if ($caso["recuperadosCaso"] == "a") {
                     $queryCasos = DB::select("UPDATE caso SET recuperadosCaso = '" . $previousRecuperados . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
                 }
@@ -170,6 +181,7 @@ class SummarizeCasesEvery24Hours extends Command
                     $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
                 }
 
+                //obitos
                 if ($caso["obitosCaso"] == "a") {
                     $queryCasos = DB::select("UPDATE caso SET obitosCaso = '" . $previousObitos . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
                 }
@@ -177,10 +189,28 @@ class SummarizeCasesEvery24Hours extends Command
                     $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
                 }
 
+                //suspeitos
+                if ($caso["suspeitosCaso"] == "a") {
+                    $queryCasos = DB::select("UPDATE caso SET suspeitosCaso = '" . $previousSuspeitos . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
+                }
+                if ($previousSuspeitos > $caso['suspeitosCaso']) {
+                    $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
+                }
+
+                //descartados
+                if ($caso["descartadosCaso"] == "a") {
+                    $queryCasos = DB::select("UPDATE caso SET descartadosCaso = '" . $previousDescartados . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
+                }
+                if ($previousDescartados > $caso['descartadosCaso']) {
+                    $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
+                }
+
 
                 $previousConfirmados = $caso["confirmadosCaso"] != "a" ? $caso["confirmadosCaso"] : $previousConfirmados;
                 $previousRecuperados = $caso["recuperadosCaso"] != "a" ? $caso["recuperadosCaso"] : $previousRecuperados;
                 $previousObitos = $caso["obitosCaso"] != "a" ? $caso["obitosCaso"] : $previousObitos;
+                $previousSuspeitos = $caso["suspeitosCaso"] != "a" ? $caso["suspeitosCaso"] : $previousSuspeitos;
+                $previousDescartados = $caso["descartadosCaso"] != "a" ? $caso["descartadosCaso"] : $previousDescartados;
             }
         }
     }
