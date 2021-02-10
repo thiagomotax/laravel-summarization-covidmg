@@ -106,8 +106,8 @@ class SummarizeCasesEvery24Hours extends Command
 
                     DB::select("INSERT INTO caso(
                             idMunicipio, idUsuario, dataCaso, confirmadosCaso,
-                             obitosCaso, recuperadosCaso, suspeitosCaso, descartadosCaso, fonteCaso, auto) VALUES(
-                            '" . $id['id'] . "', $userId, '$data', 'a', 'a', 'a', 'a', 'a', '$fonte', 1)");
+                             obitosCaso, recuperadosCaso, fonteCaso, auto) VALUES(
+                            '" . $id['id'] . "', $userId, '$data', 'a', 'a', 'a', '$fonte', 1)"); //'a', 'a'
                 }
             }
         }
@@ -130,8 +130,8 @@ class SummarizeCasesEvery24Hours extends Command
             $casos = json_decode(json_encode($queryCasos), true);
             foreach ($casos as $caso) {
                 if ($caso["dataCaso"] == '2020-02-01') {
-                    if ($caso["confirmadosCaso"] == "a" && $caso["recuperadosCaso"] == "a" && $caso["obitosCaso"] == "a" && $caso["suspeitosCaso"] == "a" && $caso["descartadosCaso"] == "a")
-                        DB::select("UPDATE caso set confirmadosCaso = 0, recuperadosCaso = 0, obitosCaso = 0, suspeitosCaso = 0, descartadosCaso = 0 WHERE idCaso = " . $caso['idCaso'] . "");
+                    if ($caso["confirmadosCaso"] == "a" && $caso["recuperadosCaso"] == "a" && $caso["obitosCaso"] == "a" ) //&& $caso["suspeitosCaso"] == "a" && $caso["descartadosCaso"] == "a"
+                        DB::select("UPDATE caso set confirmadosCaso = 0, recuperadosCaso = 0, obitosCaso = 0 WHERE idCaso = " . $caso['idCaso'] . ""); //suspeitosCaso = 0, descartadosCaso = 0
                 }
             }
         }
@@ -189,28 +189,28 @@ class SummarizeCasesEvery24Hours extends Command
                     $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
                 }
 
-                //suspeitos
-                if ($caso["suspeitosCaso"] == "a") {
-                    $queryCasos = DB::select("UPDATE caso SET suspeitosCaso = '" . $previousSuspeitos . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
-                }
-                if ($previousSuspeitos > $caso['suspeitosCaso']) {
-                    $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
-                }
-
-                //descartados
-                if ($caso["descartadosCaso"] == "a") {
-                    $queryCasos = DB::select("UPDATE caso SET descartadosCaso = '" . $previousDescartados . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
-                }
-                if ($previousDescartados > $caso['descartadosCaso']) {
-                    $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
-                }
+//                //suspeitos
+//                if ($caso["suspeitosCaso"] == "a") {
+//                    $queryCasos = DB::select("UPDATE caso SET suspeitosCaso = '" . $previousSuspeitos . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
+//                }
+//                if ($previousSuspeitos > $caso['suspeitosCaso']) {
+//                    $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
+//                }
+//
+//                //descartados
+//                if ($caso["descartadosCaso"] == "a") {
+//                    $queryCasos = DB::select("UPDATE caso SET descartadosCaso = '" . $previousDescartados . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
+//                }
+//                if ($previousDescartados > $caso['descartadosCaso']) {
+//                    $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
+//                }
 
 
                 $previousConfirmados = $caso["confirmadosCaso"] != "a" ? $caso["confirmadosCaso"] : $previousConfirmados;
                 $previousRecuperados = $caso["recuperadosCaso"] != "a" ? $caso["recuperadosCaso"] : $previousRecuperados;
                 $previousObitos = $caso["obitosCaso"] != "a" ? $caso["obitosCaso"] : $previousObitos;
-                $previousSuspeitos = $caso["suspeitosCaso"] != "a" ? $caso["suspeitosCaso"] : $previousSuspeitos;
-                $previousDescartados = $caso["descartadosCaso"] != "a" ? $caso["descartadosCaso"] : $previousDescartados;
+//                $previousSuspeitos = $caso["suspeitosCaso"] != "a" ? $caso["suspeitosCaso"] : $previousSuspeitos;
+//                $previousDescartados = $caso["descartadosCaso"] != "a" ? $caso["descartadosCaso"] : $previousDescartados;
             }
         }
     }
