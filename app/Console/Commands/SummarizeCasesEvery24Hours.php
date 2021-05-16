@@ -42,17 +42,27 @@ class SummarizeCasesEvery24Hours extends Command
     public function handle()
     {
         $this->info('running');
-        $this->test();
-
+        $this->createCasosClone();
+        $this->fixZeroDates();
+        $this->fixFirstValue();
         $this->fillDatesCalendar();
         $this->fillCasesDates();
-        $this->fixFirstValue();
-        $this->fixZeroDates();
-        $this->fixValues();
+        $this->fixValues2();
     }
 
-    public function test(){
+    public function test()
+    {
         $this->info(date('Y-m-d', time() - 86400));
+    }
+
+    public function createCasosClone()
+    {
+        //clone table and keep indexes
+        $this->info('running casosClone');
+        Schema::dropIfExists('casos_copy');
+
+        DB::statement("CREATE TABLE casos_copy LIKE caso;");
+        DB::statement("INSERT INTO casos_copy SELECT * FROM caso WHERE deleted_at = '0000-00-00 00:00:00';");
     }
 
     public function fillDatesCalendar()
@@ -76,38 +86,23 @@ class SummarizeCasesEvery24Hours extends Command
     {
         $this->info('running fillCasesDates');
 
-        $model = new Caso();
         $queryIds = DB::select("SELECT idMunicipio AS id FROM municipio");
         $idsMunicipios = json_decode(json_encode($queryIds), true);
 
-        // var_dump($idsMunicipios);
         foreach ($idsMunicipios as $id) {
-            //id do responsavel pela cidade
-            $model = new Caso();
-            $queryIdUsuario = DB::select("SELECT idUsuario FROM caso WHERE idMunicipio = " . $id['id'] . " ORDER BY idCaso DESC LIMIT 1 ");
 
-            if (json_decode(json_encode($queryIdUsuario), true)) {
-                $userId = (json_decode(json_encode($queryIdUsuario), true))[0]['idUsuario'];
-            } else {
-                $userId = 2;
-            }
-
-            $queryCasos = DB::select("SELECT * FROM calendar LEFT JOIN caso on datefield=dataCaso AND idMunicipio = " . $id['id'] . " GROUP BY datefield");
+            $queryCasos = DB::select("SELECT * FROM calendar LEFT JOIN casos_copy on datefield=dataCaso AND idMunicipio = " . $id['id'] . " GROUP BY datefield");
             $casos = json_decode(json_encode($queryCasos), true);
 
             foreach ($casos as $caso) {
                 if ($caso["idMunicipio"] == NULL) {
+                    //??????????
                     $data = $caso["datefield"][0] . $caso["datefield"][1] . $caso["datefield"][2] . $caso["datefield"][3] . $caso["datefield"][4] . $caso["datefield"][5] . $caso["datefield"][6] . $caso["datefield"][7] . $caso["datefield"][8] . $caso["datefield"][9];
 
-                    //pega a ultima fonte cadastrada
-                    $fonteQuery = DB::select("SELECT fonteCaso FROM caso WHERE idMunicipio = '" . $id['id'] . "' AND fonteCaso <> '' AND auto = 0 ORDER BY idMunicipio DESC LIMIT 1");
-                    $fonteAux = json_decode(json_encode($fonteQuery), true);
-                    $fonte =  isset($fonteAux) && isset($fonteAux[0]) && isset($fonteAux[0]['fonteCaso']) ? $fonteAux[0]['fonteCaso'] : '';
-
-                    DB::select("INSERT INTO caso(
+                    DB::select("INSERT INTO casos_copy(
                             idMunicipio, idUsuario, dataCaso, confirmadosCaso,
-                             obitosCaso, recuperadosCaso, fonteCaso, auto) VALUES(
-                            '" . $id['id'] . "', $userId, '$data', 'a', 'a', 'a', '$fonte', 1)"); //'a', 'a'
+                             obitosCaso, recuperadosCaso) VALUES(
+                            '" . $id['id'] . "', 2, '$data', 'a', 'a', 'a')"); //'a', 'a'
                 }
             }
         }
@@ -117,21 +112,20 @@ class SummarizeCasesEvery24Hours extends Command
     {
         $this->info('running fixFirstValue');
 
-        $model = new Caso();
         $queryIds = DB::select("SELECT idMunicipio AS id FROM municipio");
         $idsMunicipios = json_decode(json_encode($queryIds), true);
 
         foreach ($idsMunicipios as $id) {
             $queryCasos = DB::select("
                 SELECT  *
-                FROM caso WHERE idMunicipio = " . $id['id'] . ".
+                FROM casos_copy WHERE idMunicipio = " . $id['id'] . ".
                 ");
 
             $casos = json_decode(json_encode($queryCasos), true);
             foreach ($casos as $caso) {
                 if ($caso["dataCaso"] == '2020-02-01') {
-                    if ($caso["confirmadosCaso"] == "a" && $caso["recuperadosCaso"] == "a" && $caso["obitosCaso"] == "a" ) //&& $caso["suspeitosCaso"] == "a" && $caso["descartadosCaso"] == "a"
-                        DB::select("UPDATE caso set confirmadosCaso = 0, recuperadosCaso = 0, obitosCaso = 0 WHERE idCaso = " . $caso['idCaso'] . ""); //suspeitosCaso = 0, descartadosCaso = 0
+                    if ($caso["confirmadosCaso"] == "a" && $caso["recuperadosCaso"] == "a" && $caso["obitosCaso"] == "a") //&& $caso["suspeitosCaso"] == "a" && $caso["descartadosCaso"] == "a"
+                        DB::select("UPDATE casos_copy set confirmadosCaso = 0, recuperadosCaso = 0, obitosCaso = 0 WHERE idCaso = " . $caso['idCaso'] . ""); //suspeitosCaso = 0, descartadosCaso = 0
                 }
             }
         }
@@ -141,76 +135,48 @@ class SummarizeCasesEvery24Hours extends Command
     {
         $this->info('running fixZeroDates');
 
-        $model = new Caso();
-        DB::select("DELETE FROM caso WHERE dataCaso = '0000-00-00' ");
+        DB::select("DELETE FROM casos_copy WHERE dataCaso < '2020-02-01' ");
     }
 
-    public function fixValues()
+
+
+    public function fixValues2()
     {
+        //antes disso eu apago todos so casos em que o proximo seja menor que o anterior
         $this->info('running fixValues');
 
-        $model = new Caso();
         $queryIds = DB::select("SELECT idMunicipio AS id FROM municipio");
         $idsMunicipios = json_decode(json_encode($queryIds), true);
 
         foreach ($idsMunicipios as $id) {
-            $queryCasos = DB::select("SELECT  * FROM caso WHERE idMunicipio = '" . $id['id'] . "' AND deleted_at = '0000-00-00' ORDER BY dataCaso ASC");
+            $queryCasos = DB::select("SELECT * FROM casos_copy WHERE idMunicipio = '" . $id['id'] . "' AND deleted_at = '0000-00-00 00:00:00' ORDER BY dataCaso ASC");
 
             $casos = json_decode(json_encode($queryCasos), true);
 
             $previousConfirmados = null;
             $previousRecuperados = null;
             $previousObitos = null;
-            $previousDescartados = null;
-            $previousSuspeitos = null;
 
-            foreach ($casos as $key => $caso) {
+
+            foreach ($casos as $index => $caso) {
                 //confirmados
                 if ($caso["confirmadosCaso"] == "a") {
-                    $queryCasos = DB::select("UPDATE caso SET confirmadosCaso = '" . $previousConfirmados . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
-                }
-                if ($previousConfirmados > $caso['confirmadosCaso']) {
-                    $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
+                    DB::select("UPDATE casos_copy SET confirmadosCaso = '" . $previousConfirmados . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
                 }
 
                 //recuperados
                 if ($caso["recuperadosCaso"] == "a") {
-                    $queryCasos = DB::select("UPDATE caso SET recuperadosCaso = '" . $previousRecuperados . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
-                }
-                if ($previousRecuperados > $caso['recuperadosCaso']) {
-                    $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
+                    DB::select("UPDATE casos_copy SET recuperadosCaso = '" . $previousRecuperados . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
                 }
 
                 //obitos
                 if ($caso["obitosCaso"] == "a") {
-                    $queryCasos = DB::select("UPDATE caso SET obitosCaso = '" . $previousObitos . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
+                    DB::select("UPDATE casos_copy SET obitosCaso = '" . $previousObitos . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
                 }
-                if ($previousObitos > $caso['obitosCaso']) {
-                    $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
-                }
-
-//                //suspeitos
-//                if ($caso["suspeitosCaso"] == "a") {
-//                    $queryCasos = DB::select("UPDATE caso SET suspeitosCaso = '" . $previousSuspeitos . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
-//                }
-//                if ($previousSuspeitos > $caso['suspeitosCaso']) {
-//                    $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
-//                }
-//
-//                //descartados
-//                if ($caso["descartadosCaso"] == "a") {
-//                    $queryCasos = DB::select("UPDATE caso SET descartadosCaso = '" . $previousDescartados . "' WHERE idCaso =  '" . $caso['idCaso'] . "' ");
-//                }
-//                if ($previousDescartados > $caso['descartadosCaso']) {
-//                    $queryCasos = DB::select("DELETE FROM caso WHERE idCaso = '" . $caso['idCaso'] . "' ");
-//                }
-
 
                 $previousConfirmados = $caso["confirmadosCaso"] != "a" ? $caso["confirmadosCaso"] : $previousConfirmados;
                 $previousRecuperados = $caso["recuperadosCaso"] != "a" ? $caso["recuperadosCaso"] : $previousRecuperados;
                 $previousObitos = $caso["obitosCaso"] != "a" ? $caso["obitosCaso"] : $previousObitos;
-//                $previousSuspeitos = $caso["suspeitosCaso"] != "a" ? $caso["suspeitosCaso"] : $previousSuspeitos;
-//                $previousDescartados = $caso["descartadosCaso"] != "a" ? $caso["descartadosCaso"] : $previousDescartados;
             }
         }
     }
